@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sftp-server
+  namespace: test-sftp
+  labels:
+    app: sftp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sftp
+  template:
+    metadata:
+      labels:
+        app: sftp
+    spec:
+      volumes:
+      - name: sftp-pv-storage
+        persistentVolumeClaim:
+          claimName: sftp-pv-claim
+      - name: config-volume
+        configMap:
+          name: sftp-user-config
+      imagePullSecrets:
+      - name: harbor
+      containers:
+      - name: sftp
+        image: docker.com/*****/sftp-service:0.0.6
+        ports:
+        - containerPort: 22
+        volumeMounts:
+        - name: config-volume
+          mountPath: /opt/conf/
+        - name: sftp-pv-storage
+          mountPath: /mnt/data/
+---
+apiVersion: v1
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5pbnRlcm5hbC5lbG1lYy5jbG91ZCI6eyJ1c2VybmFtZSI6InJvYm90JHRlc3RmcnVzaW4iLCJwYXNzd29yZCI6ImFNYm1Udmh3M1RURHM3ZGxwVkpMREJDUFl3UngxMDBrIiwiZW1haWwiOiJhQGEuY29tIiwiYXV0aCI6ImNtOWliM1FrZEdWemRHWnlkWE5wYmpwaFRXSnRWSFpvZHpOVVZFUnpOMlJzY0ZaS1RFUkNRMUJaZDFKNE1UQXdhdz09In19fQ==
+kind: Secret
+metadata:
+  namespace: test-sftp
+  creationTimestamp: null
+  name: harbor
+type: kubernetes.io/dockerconfigjson
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sftp-user-config
+  namespace: test-sftp
+data:
+  users.json: |
+    {
+    "users": [
+        {
+
+            "username" : "test",
+            "keys" : [
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCbQoxOu9Shk5nzYlan024aYgOwIzhrnQnKcnkPcMHrOuxkIFXMlYPoAl3YVJEN2tL/NvL+KQyx2u5t9C6ZtlPIxj9c6HMib6kFBMkwY3zP9tq49LpMi6ij3/Up/qDIiUp6y3YhvcrAT48CFiyX+635w77Z+X/zfw5Z/NzucvtAp9QLqv4oHHQE1Jjkl33QmoLrQ+lcLet4/8QaoW07LWYsxAk2p+Z+KilP1TLwj2ApdciwekAvMkhlX0yV1QQNr5GBzdJTOhX9M0Ian2w8sABbbYcTzQOyF2GTKzNTDLclSLWVAIEHwBI2QpJUSqZaRnWA1auziwk7exiqpAEdrZEF test@debian",
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCsmPl2Qjfrdt26mQnu1xYQqJRerNQf5UPZtWmDx5tOBV5/LCF7nBl4PaneGODZ0YlgYQXY5g/ZoEACqdOdV6p+IGxXs+8a163D/osL4qO5XIz3Dzw7R4Ga7+7JEBW80aRyyl0JTN87tYHgyO61ODXKrFNwW2v3/pooIKCWlTsOEcmu7sipvB58ikhrXPqWPs2wv/fOtgFiHLF508O9Ez6YIaijYHrPNmcgL3d+LIsNKT2m0gy0IHLmKWx6YyrQivNEg/6dM7lBmd4Pj8aIRq+PQQDaPdzOROwTJDd+Leg8hHqBgjwXcXbk5Hr0JXDCASj1nGC3WUYl981VCRDVPgiJm0fmAY/GqqVC7muuymBLcL2YQ13xzuyKenU+vSqob7+e3o0fArly3uFkS8mbJEMRTFr/JlFlX8ypsduH0AlngDtTOw1Qlv1MmlNJprbrXAon4cInTb4azBywIgmazzVb64JxdS8tvXC5CkiH+SQp+x46N7ydAyuPqyscREqP//8= test@debian"
+            ]
+        },
+        {
+            "username": "sftp_user",
+            "keys" : [
+                "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC965VBTF1YDRO4AMLL0idiRBrM87Epw///V9TaSKA7TFuwPgnmyaEBpf1PuC2iVn8c5CnJ+ZOUf+JO+Net8PfAHoziM7m4lL8TQ+YJ4sKKBFqr6e2kAuzNVROjhwAx5at4sMabfMwSeXJrseRVRFC7Uz3l2HE4WfGSE69XlJ8iDwIQ7sP5WkCeP01seja7ve+IBvgODRdYoZZxu5M86mVYvZ0EHwZSBQ/z0Ov5VOHE6WWq1kEykEWpJtp8M2g2MVnVtY8mOyA+3An7NSUOqCVNbO8Rsx3M0mBuUvMQ5yP8V28SVkBUYh/JT32zo7i5lR7M7H/uGUBOpgJ1loEf3HIZ sftp_user@debian"
+            ]
+        }
+    ]
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sftp-pv-claim
+  namespace: test-sftp
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
